@@ -7,13 +7,7 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <stdlib.h>
-
-#define CHECK_PTR(p)  \
-  do {                \
-    if (p == NULL) {  \
-      exit(1);        \
-    }                 \
-  } while (0)
+#include <stdio.h>
 
 #define C PolyFromCoeff
 
@@ -47,6 +41,8 @@ static Poly MakePolyHelper(poly_exp_t dummy, ...) {
 
 #define P(...) MakePolyHelper(0, __VA_ARGS__, PolyZero(), -1)
 
+#define POLY_P P(P(C(1), 3), 0, P(C(1), 2), 2, C(1), 3)
+
 static bool TestOp(Poly a, Poly b, Poly res,
                    Poly (*op)(const Poly *, const Poly *)) {
   Poly c = op(&a, &b);
@@ -62,6 +58,7 @@ static bool TestAdd(Poly a, Poly b, Poly res) {
   return TestOp(a, b, res, PolyAdd);
 }
 
+
 static bool TestAddMonos(size_t count, Mono monos[], Poly res) {
   Poly b = PolyAddMonos(count, monos);
   bool is_eq = PolyIsEq(&b, &res);
@@ -69,6 +66,7 @@ static bool TestAddMonos(size_t count, Mono monos[], Poly res) {
   PolyDestroy(&res);
   return is_eq;
 }
+
 
 static bool TestMul(Poly a, Poly b, Poly res) {
   return TestOp(a, b, res, PolyMul);
@@ -90,6 +88,7 @@ static bool TestDeg(Poly a, poly_exp_t res) {
   return is_eq;
 }
 
+
 static bool TestEq(Poly a, Poly b, bool res) {
   bool is_eq = PolyIsEq(&a, &b) == res;
   PolyDestroy(&a);
@@ -105,6 +104,7 @@ static bool TestAt(Poly a, poly_coeff_t x, Poly res) {
   PolyDestroy(&res);
   return is_eq;
 }
+
 
 static bool SimpleAddTest(void) {
   bool res = true;
@@ -243,13 +243,12 @@ static bool SimpleNegTest(void) {
   return is_eq;
 }
 
+
 static bool SimpleSubTest(void) {
   return TestSub(P(P(C(1), 2), 0, P(C(2), 1), 1, C(1), 2),
                  P(P(C(1), 2), 0, P(C(-1), 0, C(-2), 1, C(-1), 2), 1, C(1), 2),
                  P(P(C(1), 0, C(4), 1, C(1), 2), 1));
 }
-
-#define POLY_P P(P(C(1), 3), 0, P(C(1), 2), 2, C(1), 3)
 
 static bool SimpleDegByTest(void) {
   bool res = true;
@@ -269,6 +268,7 @@ static bool SimpleDegTest(void) {
   res &= TestDeg(POLY_P, 4);
   return res;
 }
+
 
 static bool SimpleIsEqTest(void) {
   bool res = true;
@@ -309,15 +309,18 @@ static bool OverflowTest(void) {
   return res;
 }
 
+
 int main() {
-  assert(SimpleAddTest());
-  assert(SimpleAddMonosTest());
-  assert(SimpleMulTest());
-  assert(SimpleNegTest());
-  assert(SimpleSubTest());
-  assert(SimpleDegByTest());
-  assert(SimpleDegTest());
-  assert(SimpleIsEqTest());
-  assert(SimpleAtTest());
-  assert(OverflowTest());
+    assert(SimpleIsEqTest());
+    assert(SimpleAddTest());
+    assert(SimpleAddMonosTest());
+    assert(SimpleNegTest());
+    assert(SimpleDegTest());
+    assert(SimpleSubTest());
+    assert(SimpleDegByTest());
+    assert(SimpleAtTest());
+    assert(SimpleMulTest());
+    assert(OverflowTest());
+
+    return 0;
 }

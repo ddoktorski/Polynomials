@@ -13,6 +13,13 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#define CHECK_PTR(p)  \
+  do {                \
+    if (p == NULL) {  \
+      exit(1);        \
+    }                 \
+  } while (0)
+
 /** To jest typ reprezentujący współczynniki. */
 typedef long poly_coeff_t;
 
@@ -27,18 +34,18 @@ struct Mono;
  * (wtedy `arr == NULL`), albo niepustą listą jednomianów (wtedy `arr != NULL`).
  */
 typedef struct Poly {
-  /**
-  * To jest unia przechowująca współczynnik wielomianu lub
-  * liczbę jednomianów w wielomianie.
-  * Jeżeli `arr == NULL`, wtedy jest to współczynnik będący liczbą całkowitą.
-  * W przeciwnym przypadku jest to niepusta lista jednomianów.
-  */
-  union {
-    poly_coeff_t coeff; ///< współczynnik
-    size_t       size; ///< rozmiar wielomianu, liczba jednomianów
-  };
-  /** To jest tablica przechowująca listę jednomianów. */
-  struct Mono *arr;
+    /**
+    * To jest unia przechowująca współczynnik wielomianu lub
+    * liczbę jednomianów w wielomianie.
+    * Jeżeli `arr == NULL`, wtedy jest to współczynnik będący liczbą całkowitą.
+    * W przeciwnym przypadku jest to niepusta lista jednomianów.
+    */
+    union {
+        poly_coeff_t coeff; ///< współczynnik
+        size_t       size; ///< rozmiar wielomianu, liczba jednomianów
+    };
+    /** To jest tablica przechowująca listę jednomianów. */
+    struct Mono *arr;
 } Poly;
 
 /**
@@ -48,12 +55,21 @@ typedef struct Poly {
  * wielomianem nad kolejną zmienną @f$x_{i+1}@f$.
  */
 typedef struct Mono {
-  Poly p; ///< współczynnik
-  poly_exp_t exp; ///< wykładnik
+    Poly p; ///< współczynnik
+    poly_exp_t exp; ///< wykładnik
 } Mono;
 
 /**
- * Daje wartość wykładnika jendomianu.
+ * Daje wartość liczby jednomianow w wielomianie.
+ * @param[in] p : wielomian
+ * @return wartość będąca liczbą jednomianów w wielomianie
+ */
+static inline size_t PolyGetSize(const Poly *p) {
+    return p->size;
+}
+
+/**
+ * Daje wartość wykładnika jednomianu.
  * @param[in] m : jednomian
  * @return wartość wykładnika jednomianu
  */
@@ -102,6 +118,13 @@ static inline bool PolyIsCoeff(const Poly *p) {
 }
 
 /**
+ * Sprawdza, czy jednomian jest współczynnikiem (czy jest to wielomian stały).
+ * @param[in] m : jednomian
+ * @return Czy jednomian jest współczynnikiem?
+ */
+bool MonoIsCoeff(const Mono *m);
+
+/**
  * Sprawdza, czy wielomian jest tożsamościowo równy zeru.
  * @param[in] p : wielomian
  * @return Czy wielomian jest równy zeru?
@@ -109,6 +132,13 @@ static inline bool PolyIsCoeff(const Poly *p) {
 static inline bool PolyIsZero(const Poly *p) {
   return PolyIsCoeff(p) && p->coeff == 0;
 }
+
+/**
+ * Tworzy nowy wielomian, alokuje w nim tablice arr długości size
+ * @param[in] size : długość tablicy jednomianów
+ * @return pusty wielomian z tablicą arr długości size
+ */
+Poly PolyAlloc(size_t size);
 
 /**
  * Usuwa wielomian z pamięci.
@@ -141,6 +171,32 @@ static inline Mono MonoClone(const Mono *m) {
 }
 
 /**
+ * Dodaje dwa wielomiany stałe
+ * @param[in] p_coeff : współczynnik w wielomianie stałym @f$p@f$
+ * @param[in] q_coeff : współczynnik w wielomianie stałym @f$q@f$
+ * @return @f$p + q@f$
+ */
+static inline Poly PolyCoeffAddPolyCoeff(poly_coeff_t p_coeff, poly_coeff_t q_coeff) {
+    return PolyFromCoeff(p_coeff + q_coeff);
+}
+
+/**
+ * Dodaje dwa wielomiany, z czego wielomian @f$q@f$ jest wielomianem stałym
+ * @param[in] p : wielomian @f$p@f$
+ * @param[in] q_coeff : współczynnik w wielomianie stałym @f$q@f$
+ * @return @f$p + q@f$
+ */
+Poly PolyAddPolyCoeff(const Poly *p, poly_coeff_t q_coeff);
+
+/**
+ * Dodaje dwa wielomiany, które nie są wielomianami stałymi
+ * @param[in] p : wielomian @f$p@f$
+ * @param[in] q : wielomian @f$q@f$
+ * @return @f$p + q@f$
+ */
+Poly PolyAddPoly(const Poly *p, const Poly *q);
+
+/**
  * Dodaje dwa wielomiany.
  * @param[in] p : wielomian @f$p@f$
  * @param[in] q : wielomian @f$q@f$
@@ -156,6 +212,24 @@ Poly PolyAdd(const Poly *p, const Poly *q);
  * @return wielomian będący sumą jednomianów
  */
 Poly PolyAddMonos(size_t count, const Mono monos[]);
+
+
+
+/**
+ * Mnoży wielomian przez wsółczynnik.
+ * @param[in] p : wielomian @f$p@f$
+ * @param[in] q_coeff : współczynnik w wielomianie stałym @f$q@f$
+ * @return @f$p * q@f$
+ */
+Poly PolyMulPolyCoeff(const Poly *p, poly_coeff_t q_coeff);
+
+/**
+ * Mnoży dwa wielomiany, które nie są wielomianami stałymi.
+ * @param[in] p : wielomian @f$p@f$
+ * @param[in] q : wielomian @f$q@f$
+ * @return @f$p * q@f$
+ */
+Poly PolyMulPoly(const Poly *p, const Poly *q);
 
 /**
  * Mnoży dwa wielomiany.
@@ -219,5 +293,8 @@ bool PolyIsEq(const Poly *p, const Poly *q);
  * @return @f$p(x, x_0, x_1, \ldots)@f$
  */
 Poly PolyAt(const Poly *p, poly_coeff_t x);
+
+// pomocnicze
+void PolyPrint(const Poly *p);
 
 #endif /* __POLY_H__ */
