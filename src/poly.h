@@ -122,7 +122,7 @@ static inline bool PolyIsCoeff(const Poly *p) {
  * @param[in] m : jednomian
  * @return Czy jednomian jest współczynnikiem?
  */
-bool MonoIsCoeff(const Mono *m);
+bool MonoIsCoeff(const Mono *m, poly_coeff_t *coeff);
 
 /**
  * Sprawdza, czy wielomian jest tożsamościowo równy zeru.
@@ -295,6 +295,6 @@ bool PolyIsEq(const Poly *p, const Poly *q);
 Poly PolyAt(const Poly *p, poly_coeff_t x);
 
 // pomocnicze
-void PolyPrint(const Poly *p);
+//void PolyPrint(const Poly *p);
 
 #endif /* __POLY_H__ */

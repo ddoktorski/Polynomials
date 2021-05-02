@@ -11,10 +11,27 @@ int max(int x, int y) {
     return (x > y) ? x : y;
 }
 
-poly_coeff_t power(poly_coeff_t x, poly_exp_t exp) {
-    if (exp == 0)
-        return 1;
-    return x * power(x, exp - 1);
+static poly_coeff_t PowHelp(poly_coeff_t a, poly_coeff_t b, poly_exp_t n)
+{
+    if (n == 0)
+    {
+        return a;
+    }
+    else
+    {
+        return PowHelp(n % 2 == 0 ? a : a * b, b * b, n / 2);
+    }
+}
+
+/**
+ * Wylicza @f$a^n@f$.
+ * @param[in] a - podstawa
+ * @param[in] n - wykładnik
+ * @return @f$a^n@f$
+ */
+static inline poly_coeff_t power(poly_coeff_t a, poly_exp_t n)
+{
+    return PowHelp(1, a, n);
 }
 
 Poly PolyAlloc(size_t size) {
@@ -46,13 +63,15 @@ Poly PolyClone(const Poly *p) {
     return copy;
 }
 
-bool MonoIsCoeff(const Mono *m) {
-    if (m->exp == 0 && PolyIsCoeff(&m->p))
+bool MonoIsCoeff(const Mono *m, poly_coeff_t *coeff) {
+    if (m->exp == 0 && PolyIsCoeff(&m->p)) {
+        *coeff = m->p.coeff;
         return true;
+    }
     else if (m->exp != 0 || (!PolyIsCoeff(&m->p) && m->p.size > 1))
         return false;
     else
-        return MonoIsCoeff(&m->p.arr[0]);
+        return MonoIsCoeff(&m->p.arr[0], coeff);
 }
 
 int CompareMonosByExp(const void *a, const void *b) {
@@ -132,22 +151,21 @@ Poly PolyAddPoly(const Poly *p, const Poly *q) {
         j++;
     }
 
+    poly_coeff_t coeff;
     if (real_size == 0) {
-        free(added.arr);
-        added.arr = NULL;
-        added.coeff = 0;
+        PolyDestroy(&added);
+        return PolyZero();
     }
-    else if (real_size == 1 && MonoGetExp(&added.arr[0]) == 0 && PolyIsCoeff(&added.arr[0].p)) {
-        added.coeff = added.arr[0].p.coeff;
-        free(added.arr);
-        added.arr = NULL;
+    else if (real_size == 1 && MonoIsCoeff(&added.arr[0], &coeff)) {
+        PolyDestroy(&added);
+        return PolyFromCoeff(coeff);
     }
     else {
         added.size = real_size;
         added.arr = (Mono*)realloc(added.arr, real_size * sizeof(Mono));
         CHECK_PTR(added.arr);
+        return added;
     }
-    return added;
 }
 
 Poly PolyAdd(const Poly *p, const Poly *q) {
@@ -171,7 +189,7 @@ Poly PolyAddMonos(size_t count, const Mono monos[]) {
     size_t real_size = 0;
 
     for (size_t i = 0; i < count; ++i) {
-        if (i == 0 || MonoGetExp(&sorted_monos[i]) != MonoGetExp(&sorted_monos[real_size - 1]))
+        if (real_size == 0 || MonoGetExp(&sorted_monos[i]) != MonoGetExp(&sorted_monos[real_size - 1]))
             sorted_monos[real_size++] = sorted_monos[i];
         else {
             poly_exp_t exp = MonoGetExp(&sorted_monos[i]);
@@ -180,23 +198,20 @@ Poly PolyAddMonos(size_t count, const Mono monos[]) {
             MonoDestroy(&sorted_monos[real_size - 1]);
 
             if (PolyIsZero(&sum)) {
-                real_size = (real_size == 0) ? 0 : real_size - 1;
+                real_size--;
                 PolyDestroy(&sum);
             }
             else
                 sorted_monos[real_size - 1] = MonoFromPoly(&sum, exp);
         }
     }
-
-    if (real_size == 0)
+    poly_coeff_t coeff;
+    if (real_size == 0) {
+        free(sorted_monos);
         return PolyZero();
-    else if (real_size == 1 && MonoIsCoeff(&sorted_monos[0])) {
-        Poly *pom = &sorted_monos[0].p;
-        while (pom->arr != NULL) {
-            pom = &pom->arr[0].p;
-        }
-        poly_coeff_t coeff = pom->coeff;
-        MonoDestroy(&sorted_monos[0]);
+    }
+    else if (real_size == 1 && MonoIsCoeff(&sorted_monos[0], &coeff)) {
+        free(sorted_monos);
         return PolyFromCoeff(coeff);
     }
 
@@ -263,6 +278,8 @@ void PolyNegHelper(Poly *clone) {
 }
 
 Poly PolyNeg(const Poly *p) {
+    if (PolyIsZero(p))
+        return PolyZero();
     Poly clone = PolyClone(p);
     PolyNegHelper(&clone);
     return clone;
@@ -279,7 +296,7 @@ Poly PolyMulPolyCoeff(const Poly *p, poly_coeff_t q_coeff) {
     if (q_coeff == 0)
         return PolyZero();
     else if (q_coeff == 1)
-        return *p;
+        return PolyClone(p);
     if (PolyIsCoeff(p))
         return PolyFromCoeff(p->coeff * q_coeff);
 
@@ -317,6 +334,7 @@ Poly PolyMulPoly(const Poly *p, const Poly *q) {
         return PolyZero();
     }
     monos = (Mono*)realloc(monos, real_size * sizeof(Mono));
+    CHECK_PTR(monos);
     Poly result = PolyAddMonos(real_size, monos);
     free(monos); // mozliwe memory leak
     return result;
@@ -334,20 +352,23 @@ Poly PolyMul(const Poly *p, const Poly *q) {
 
 Poly PolyAt(const Poly *p, poly_coeff_t x) {
     if (PolyIsCoeff(p))
-        return *p;
+        return PolyClone(p);
 
     Poly result = PolyZero();
     for (size_t i = 0; i < PolyGetSize(p); ++i) {
         poly_coeff_t value = power(x, MonoGetExp(&p->arr[i]));
-        Poly multiply = PolyMulPolyCoeff(&p->arr[i].p, value);
-        Poly add = PolyAdd(&multiply, &result);
-        //PolyDestroy(&multiply); // double free detected
+
+        Poly multiplied = PolyMulPolyCoeff(&p->arr[i].p, value);
+
+        Poly add = PolyAdd(&multiplied, &result);
+
+        PolyDestroy(&multiplied); // double free detected
         PolyDestroy(&result);
         result = add;
     }
     return result;
 }
-
+/*
 void PolyPrintHelper(const Poly *p, int i) {
     if (PolyIsZero(p))
         printf("ZERO");
@@ -366,4 +387,4 @@ void PolyPrintHelper(const Poly *p, int i) {
 void PolyPrint(const Poly *p) {
     PolyPrintHelper(p, 0);
     printf("\n");
-}
+}*/
