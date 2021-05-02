@@ -13,13 +13,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#define CHECK_PTR(p)  \
-  do {                \
-    if (p == NULL) {  \
-      exit(1);        \
-    }                 \
-  } while (0)
-
 /** To jest typ reprezentujący współczynniki. */
 typedef long poly_coeff_t;
 

@@ -10,6 +10,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+/** Makro do sprawdzania, czy udało się zaalokować pamięć. */
+#define CHECK_PTR(p)  \
+  do {                \
+    if (p == NULL) {  \
+      exit(1);        \
+    }                 \
+  } while (0)
+
 /**
  * Funkcja pomocnicza do obliczania większej z dwóch liczb
  * @param x : pierwsza liczba
