@@ -120,6 +120,7 @@ static inline bool PolyIsCoeff(const Poly *p) {
 /**
  * Sprawdza, czy jednomian jest współczynnikiem (czy jest to wielomian stały).
  * @param[in] m : jednomian
+ * @param[in, out] coeff : współczynnik, do którego zapisywana jest wartość wielomianu jeżeli funkcja zwraca true
  * @return Czy jednomian jest współczynnikiem?
  */
 bool MonoIsCoeff(const Mono *m, poly_coeff_t *coeff);
@@ -171,32 +172,6 @@ static inline Mono MonoClone(const Mono *m) {
 }
 
 /**
- * Dodaje dwa wielomiany stałe
- * @param[in] p_coeff : współczynnik w wielomianie stałym @f$p@f$
- * @param[in] q_coeff : współczynnik w wielomianie stałym @f$q@f$
- * @return @f$p + q@f$
- */
-static inline Poly PolyCoeffAddPolyCoeff(poly_coeff_t p_coeff, poly_coeff_t q_coeff) {
-    return PolyFromCoeff(p_coeff + q_coeff);
-}
-
-/**
- * Dodaje dwa wielomiany, z czego wielomian @f$q@f$ jest wielomianem stałym
- * @param[in] p : wielomian @f$p@f$
- * @param[in] q_coeff : współczynnik w wielomianie stałym @f$q@f$
- * @return @f$p + q@f$
- */
-Poly PolyAddPolyCoeff(const Poly *p, poly_coeff_t q_coeff);
-
-/**
- * Dodaje dwa wielomiany, które nie są wielomianami stałymi
- * @param[in] p : wielomian @f$p@f$
- * @param[in] q : wielomian @f$q@f$
- * @return @f$p + q@f$
- */
-Poly PolyAddPoly(const Poly *p, const Poly *q);
-
-/**
  * Dodaje dwa wielomiany.
  * @param[in] p : wielomian @f$p@f$
  * @param[in] q : wielomian @f$q@f$
@@ -212,24 +187,6 @@ Poly PolyAdd(const Poly *p, const Poly *q);
  * @return wielomian będący sumą jednomianów
  */
 Poly PolyAddMonos(size_t count, const Mono monos[]);
-
-
-
-/**
- * Mnoży wielomian przez wsółczynnik.
- * @param[in] p : wielomian @f$p@f$
- * @param[in] q_coeff : współczynnik w wielomianie stałym @f$q@f$
- * @return @f$p * q@f$
- */
-Poly PolyMulPolyCoeff(const Poly *p, poly_coeff_t q_coeff);
-
-/**
- * Mnoży dwa wielomiany, które nie są wielomianami stałymi.
- * @param[in] p : wielomian @f$p@f$
- * @param[in] q : wielomian @f$q@f$
- * @return @f$p * q@f$
- */
-Poly PolyMulPoly(const Poly *p, const Poly *q);
 
 /**
  * Mnoży dwa wielomiany.
@@ -293,8 +250,5 @@ bool PolyIsEq(const Poly *p, const Poly *q);
  * @return @f$p(x, x_0, x_1, \ldots)@f$
  */
 Poly PolyAt(const Poly *p, poly_coeff_t x);
-
-// pomocnicze
-//void PolyPrint(const Poly *p);
 
 #endif /* __POLY_H__ */
