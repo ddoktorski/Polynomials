@@ -244,4 +244,5 @@ bool PolyIsEq(const Poly *p, const Poly *q);
  */
 Poly PolyAt(const Poly *p, poly_coeff_t x);
 
+
 #endif /* __POLY_H__ */

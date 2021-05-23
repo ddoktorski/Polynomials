@@ -258,7 +258,7 @@ Poly PolyAddMonos(size_t count, const Mono monos[]) {
     if (count == 0)
         return PolyZero();
 
-    Mono *sorted_monos = (Mono*)calloc(count, sizeof(Mono));
+    Mono *sorted_monos = (Mono*) calloc(count, sizeof(Mono));
     CHECK_PTR(sorted_monos);
     memcpy(sorted_monos, monos, count * sizeof(Mono));
     qsort(sorted_monos, count, sizeof(Mono), CompareMonosByExp);
