@@ -167,14 +167,15 @@ Number ParseNumber(bool *error) {
         str.arr[str.size++] = (char) digit;
     }
 
+    ungetc(digit, stdin); // zwracamy na standardowe wejście ostatni wczytany znak
+
     if (str.size == 0) {
-        ungetc(digit, stdin);
         *error = true;
+        DestroyString(&str);
         return (Number) {.minus = false, .value = 0};
     }
 
-    ungetc(digit, stdin); // zwracamy na standardowe wejście ostatni wczytany znak
-    str.arr = (char*) realloc(str.arr, str.size);
+    str.arr = (char*) realloc(str.arr, str.size * sizeof(char));
     ull number = strtoull(str.arr, NULL, BASE);
 
     // strtoull zwraca ULLONG_MAX rowniez wtedy kiedy liczba w tablicy jest wieksza od ULLONG_MAX
@@ -382,8 +383,9 @@ Mono ParseMono(ParserProtector *protector) {
     CheckNextChar(COMMA, protector);
 
     if (StopParsing(protector)) {
+        PolyDestroy(&p);
         protector->error = true;
-        return (Mono) {.p = PolyZero(), .exp = 10};
+        return (Mono) {.p = PolyZero(), .exp = 1};
     }
 
     poly_exp_t exp = ParseExp(&protector->error);
@@ -391,8 +393,9 @@ Mono ParseMono(ParserProtector *protector) {
     CheckNextChar(RIGHT_BRACKET, protector);
 
     if (StopParsing(protector)) {
+        PolyDestroy(&p);
         protector->error = true;
-        return (Mono) {.p = PolyZero(), .exp = 10};
+        return (Mono) {.p = PolyZero(), .exp = 1};
     }
 
     return MonoFromPoly(&p, exp);
@@ -450,8 +453,10 @@ void ParseCommand(String *command) {
         next = getchar();
     }
     ungetc(next, stdin);
-    CheckStringSpace(command);
-    command->arr[command->size] = '\0';
+    if (command->size > 0) {
+        CheckStringSpace(command);
+        command->arr[command->size++] = '\0';
+    }
 }
 
 void ExecuteCommand(Stack *s, String *command, ParserProtector *protector, size_t row) {
@@ -459,6 +464,10 @@ void ExecuteCommand(Stack *s, String *command, ParserProtector *protector, size_
 
     if (CommandsEqual(command, DEG_BY)) {
         int next = NextChar();
+        // wnioskuje z przykładowych testów, że jeżeli po poleceniu mamy biały znak inny niż
+        // spacja to traktujemy to jako błąd argumentu, natomiast jeżeli mamy jakiś inny znak
+        // to wówczas jest to błąd polecenia
+        // dla komendy AT postępuje tak samo
         if (LineIsOver(protector) || (9 <= next && next <= 13)) {
             protector->error = true;
             ErrorDegBy(row);
@@ -481,10 +490,6 @@ void ExecuteCommand(Stack *s, String *command, ParserProtector *protector, size_
     }
     else if (CommandsEqual(command, AT)) {
         int next = NextChar();
-        // wnioskuje z przykładowych testów, że jeżeli po poleceniu mamy biały znak inny niż
-        // spacja to traktujemy to jako błąd argumentu, natomiast jeżeli mamy jakiś inny znak
-        // to wówczas jest to błąd polecenia
-        // dla komendy AT postępuje tak samo
         if (LineIsOver(protector) || (9 <= next && next <= 13)) {
             protector->error = true;
             ErrorAt(row);
