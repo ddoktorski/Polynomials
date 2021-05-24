@@ -39,7 +39,7 @@ void StackPop(Stack *s) {
 }
 
 void StackClear(Stack *s) {
-    while (IsEmpty(s)) {
+    while (!IsEmpty(s)) {
         StackPop(s);
     }
 }

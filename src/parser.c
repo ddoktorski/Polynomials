@@ -16,6 +16,7 @@
 #define MINUS 45
 #define HASH 35
 #define SPACE 32
+#define UNDERSCORE '_'
 
 #define EOL 10
 
@@ -46,10 +47,6 @@ MonosArr CreateMonosArr() {
     Mono *arr = (Mono*) calloc(INIT_SIZE, sizeof(Mono));
     CheckPtr(arr);
     return (MonosArr) {.arr = arr, .allocated_size = INIT_SIZE, .size = 0};
-}
-
-ParserProtector InitParserProtector() {
-    return (ParserProtector) {.error = false, .end_of_file = false, .end_of_line = false};
 }
 
 static void ResetParseProtector(ParserProtector *protector) {
@@ -113,8 +110,12 @@ static inline bool CheckArgDegBy(Number *n) {
     return !n->minus && n->value <= ULLONG_MAX;
 }
 
-static void CheckIfLlongMax(String *s, bool minus, bool *error) {
-    *error = !minus && (strcmp(s->arr, ullong_max_string) == 0);
+static void CheckIfLlongMax(String *s, ull number, bool *error) {
+    if (number == ULLONG_MAX) {
+        if (strcmp(s->arr, ullong_max_string) != 0)
+            *error = true;
+    }
+
 }
 
 Number ParseNumber(bool *error) {
@@ -139,7 +140,7 @@ Number ParseNumber(bool *error) {
 
     // strtoull zwraca ULLONG_MAX rowniez wtedy kiedy liczba w tablicy jest wieksza od ULLONG_MAX
     // zatem sprawdzamy jezeli number == ULLONG_MAX czy rzeczywiscie jest to ta wartoscia
-    CheckIfLlongMax(&str, minus, error);
+    CheckIfLlongMax(&str, number, error);
 
     DestroyString(&str);
 
@@ -164,6 +165,10 @@ poly_exp_t ParseExp(bool *error) {
     return (*error) ? 0 : (int) ConvertNumber(&num);
 }
 
+static bool LineIsOver(ParserProtector *protector) {
+    return protector->end_of_file || protector->end_of_line;
+}
+
 ull ParseArgDegBy(bool *error) {
     Number num = ParseNumber(error);
     if (!CheckArgDegBy(&num))
@@ -172,24 +177,33 @@ ull ParseArgDegBy(bool *error) {
 }
 
 static void CheckIfEnd(ParserProtector *protector) {
-    int next = getchar();
-    if (next == EOL)
-        protector->end_of_line = true;
-    else if (next == EOF)
-        protector->end_of_file = true;
-    else
-        ungetc(next, stdin);
+    if (!LineIsOver(protector)) {
+        int next = getchar();
+        if (next == EOL)
+            protector->end_of_line = true;
+        else if (next == EOF)
+            protector->end_of_file = true;
+        else
+            ungetc(next, stdin);
+    }
 }
 
 static inline bool StopParsing(ParserProtector *protector) {
     return protector->end_of_file || protector->end_of_line || protector->error;
 }
 
+static int NextChar() {
+    int next = getchar();
+    ungetc(next, stdin);
+    return next;
+}
+
 static void CheckNextChar(int value, ParserProtector *protector) {
     CheckIfEnd(protector);
     if (!StopParsing(protector)) {
         int next = getchar();
-        protector->error = next != value;
+        if (next != value)
+            protector->error = true;
     }
 }
 
@@ -199,26 +213,44 @@ static void SkipLine(ParserProtector *protector) {
         c = getchar();
     } while (c != EOF && c != EOL);
     protector->end_of_file = (c == EOF) ? true : false;
+    protector->end_of_line = (c == EOL) ? true : false;
 }
 
 Mono ParseMono(ParserProtector *protector) {
     CheckNextChar(LEFT_BRACKET, protector);
+    if (StopParsing(protector)) {
+        protector->error = true;
+        return (Mono) {.p = PolyZero(), .exp = 1};
+    }
+
     Poly p = ParsePoly(protector);
     CheckNextChar(COMMA, protector);
+    if (StopParsing(protector)) {
+        protector->error = true;
+        return (Mono) {.p = PolyZero(), .exp = 1};
+    }
     poly_exp_t exp = ParseExp(&protector->error);
     CheckNextChar(RIGHT_BRACKET, protector);
+    if (StopParsing(protector)) {
+        protector->error = true;
+        return (Mono) {.p = PolyZero(), .exp = 1};
+    }
     return MonoFromPoly(&p, exp);
-}
-
-static int NextChar() {
-    int next = getchar();
-    ungetc(next, stdin);
-    return next;
 }
 
 static bool NextPolyIsCoeff() {
     int next = NextChar();
     return next == MINUS || (MIN_DIGIT <= next && next <= MAX_DIGIT);
+}
+
+static void CheckIfEndOfPoly(bool *error, bool *end_of_poly) {
+    int next = NextChar();
+    if (next == PLUS)
+        getchar();
+    else if (next == COMMA)
+        *end_of_poly = true;
+    else
+        *error = true;
 }
 
 Poly ParsePoly(ParserProtector *protector) {
@@ -230,19 +262,23 @@ Poly ParsePoly(ParserProtector *protector) {
     CheckIfEnd(protector);
     MonosArr monos = CreateMonosArr();
 
-    while (!StopParsing(protector)) {
+    // ta zmienna kontroluje, czy nie doszliśmy do końca wielomianu, wtedy gdy ten koniec jest przecinkiem
+    // oddzielającym wielomian od wykładnika w jednomianie
+    bool end_of_poly = false;
+
+    while (!StopParsing(protector) && !end_of_poly) {
         CheckMonosArrSpace(&monos);
         Mono m = ParseMono(protector);
-        CheckNextChar(PLUS, protector);
         monos.arr[monos.size++] = m;
         CheckIfEnd(protector);
-    }
 
-    /*
-    if (protector->error) {
-        DestroyMonosArrDeep(&monos);
-        return PolyFromCoeff(1);
-    }*/
+        // jeżeli nie mamy powodu żeby zakończyć parsować
+        // to kolejny znak musi być plusem lub przecinkiem
+        // jeżeli jest plusem to kontunuujemy parsowanie
+        // jeżeli jest przecinkiem to kończymy
+        if (!StopParsing(protector))
+            CheckIfEndOfPoly(&protector->error, &end_of_poly);
+    }
 
     Poly p = PolyAddMonos(monos.size, monos.arr);
     DestroyMonosArrShallow(&monos);
@@ -254,22 +290,20 @@ static bool CommentOrEmptyLine() {
     return next == EOL || next == HASH;
 }
 
-static bool PolyInLine() {
+static bool CommandInLine() {
     int next = NextChar();
-    return next == LEFT_BRACKET || next == MINUS || (MIN_DIGIT <= next && next <= MAX_DIGIT);
+    return (SMALL_A <= next && next <= SMALL_Z) || (BIG_A <= next && next <= BIG_Z);
 }
 
 static bool IsLetter(int sign) {
-    return (SMALL_A <= sign && sign <= SMALL_Z) || (BIG_A <= sign && sign <= BIG_Z);
+    return BIG_A <= sign && sign <= BIG_Z;
 }
 
 String ParseCommand() {
     String command = CreateString();
     int next = getchar();
-    while (IsLetter(next)) {
+    while (IsLetter(next) || next == UNDERSCORE) {
         CheckStringSpace(&command);
-        if (SMALL_A <= next && next <= SMALL_Z)
-            next -= LETTER_SHIFT; // jeżeli wczytamy małą literę to zamieniamy ją na wielką
         command.arr[command.size++] = (char) next;
         next = getchar();
     }
@@ -282,85 +316,101 @@ static inline bool CommandsEqual(String *command, char *arr) {
     return strcmp(command->arr, arr) == 0;
 }
 
+static bool NextIsSpace() {
+    int next = getchar();
+    if (next == SPACE) {
+        return true;
+    }
+    else {
+        ungetc(next, stdin);
+        return false;
+    }
+}
 
 void ExecuteCommand(Stack *s, String *command, ParserProtector *protector, size_t row) {
-    if (CommandsEqual(command, ZERO)) {
-        Zero(s);
-    }
-    else if (CommandsEqual(command, IS_COEFF)) {
-        IsCoeff(s, row);
-    }
-    else if (CommandsEqual(command, IS_ZERO)) {
-        IsZero(s, row);
-    }
-    else if (CommandsEqual(command, CLONE)) {
-        Clone(s, row);
-    }
-    else if (CommandsEqual(command, ADD)) {
-        Add(s, row);
-    }
-    else if (CommandsEqual(command, MUL)) {
-        Mul(s, row);
-    }
-    else if (CommandsEqual(command, SUB)) {
-        Sub(s, row);
-    }
-    else if (CommandsEqual(command, NEG)) {
-        Neg(s, row);
-    }
-    else if (CommandsEqual(command, IS_EQ)) {
-        IsEq(s, row);
-    }
-    else if (CommandsEqual(command, DEG)) {
-        Deg(s, row);
-    }
-    else if (CommandsEqual(command, DEG_BY)) {
-        CheckNextChar(SPACE, protector);
-        if (protector->error) {
+    CheckIfEnd(protector);
+
+    if (CommandsEqual(command, DEG_BY)) {
+        if (LineIsOver(protector) || !NextIsSpace()) {
+            protector->error = true;
             ErrorDegBy(row);
             return;
         }
         ull arg = ParseArgDegBy(&protector->error);
-        if (protector->error) {
+        CheckIfEnd(protector);
+        if (!LineIsOver(protector) || protector->error) {
             ErrorDegBy(row);
             return;
         }
         DegBy(s, row, arg);
     }
     else if (CommandsEqual(command, AT)) {
-        CheckNextChar(SPACE, protector);
-        if (protector->error) {
+        if (LineIsOver(protector) || !NextIsSpace()) {
+            protector->error = true;
             ErrorAt(row);
             return;
         }
-        long int x = ParseCoeff(&protector->error);
-        if (protector->error) {
+        poly_coeff_t x = ParseCoeff(&protector->error);
+        CheckIfEnd(protector);
+        if (!LineIsOver(protector) || protector->error) {
+            protector->error = true;
             ErrorAt(row);
             return;
         }
         At(s, row, x);
     }
-    else if (CommandsEqual(command, POP)) {
-        Pop(s, row);
-    }
-    else if (CommandsEqual(command, PRINT)) {
-        Print(s, row);
+    else if (LineIsOver(protector)) {
+        if (CommandsEqual(command, ZERO))
+            Zero(s);
+        else if (CommandsEqual(command, IS_COEFF))
+            IsCoeff(s, row);
+        else if (CommandsEqual(command, IS_ZERO))
+            IsZero(s, row);
+        else if (CommandsEqual(command, CLONE))
+            Clone(s, row);
+        else if (CommandsEqual(command, ADD))
+            Add(s, row);
+        else if (CommandsEqual(command, MUL))
+            Mul(s, row);
+        else if (CommandsEqual(command, SUB))
+            Sub(s, row);
+        else if (CommandsEqual(command, NEG))
+            Neg(s, row);
+        else if (CommandsEqual(command, IS_EQ))
+            IsEq(s, row);
+        else if (CommandsEqual(command, DEG))
+            Deg(s, row);
+        else if (CommandsEqual(command, POP))
+            Pop(s, row);
+        else if (CommandsEqual(command, PRINT))
+            Print(s, row);
+        else {
+            protector->error = true;
+            ErrorWrongCommand(row);
+        }
     }
     else {
+        protector->error = true;
         ErrorWrongCommand(row);
     }
 }
 
 void ParseInput(Stack *s) {
-    ParserProtector protector = InitParserProtector();
+    ParserProtector protector;
+    ResetParseProtector(&protector);
     size_t row_number = 1;
 
     while (!protector.end_of_file) {
         ResetParseProtector(&protector);
         if (!CommentOrEmptyLine()) {
-            if (PolyInLine()) {
+            if (CommandInLine()) {
+                String command = ParseCommand();
+                ExecuteCommand(s, &command, &protector, row_number);
+            }
+            else { // parsujemy wielomian
                 Poly p = ParsePoly(&protector);
-                if (protector.error) {
+                CheckIfEnd(&protector);
+                if (protector.error || !LineIsOver(&protector)) {
                     PolyDestroy(&p);
                     ErrorWrongPoly(row_number);
                 }
@@ -368,16 +418,14 @@ void ParseInput(Stack *s) {
                     StackPush(s, &p);
                 }
             }
-            else { // parsujemy komende
-                String command = ParseCommand();
-                ExecuteCommand(s, &command, &protector, row_number);
-            }
         }
 
-        if (!protector.end_of_file && !protector.end_of_line)
+        if (!LineIsOver(&protector))
             SkipLine(&protector);
 
-        CheckIfEnd(&protector);
+        if (!protector.end_of_file)
+            CheckIfEnd(&protector);
+
         row_number++;
     }
 }
