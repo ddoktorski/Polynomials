@@ -320,7 +320,7 @@ static bool CommentOrEmptyLine() {
 
 /**
  * Sprawdza czy wiersz jest poleceniem.
- * @return Czy wiersz jest poleceniem?
+ * @return Czy następny wczytywany znak jest literą?
  */
 static bool CommandInLine() {
     int next = NextChar();
@@ -458,9 +458,15 @@ void ExecuteCommand(Stack *s, String *command, ParserProtector *protector, size_
     CheckIfEnd(protector);
 
     if (CommandsEqual(command, DEG_BY)) {
-        if (LineIsOver(protector) || !NextIsSpace()) {
+        int next = NextChar();
+        if (LineIsOver(protector) || (9 <= next && next <= 13)) {
             protector->error = true;
             ErrorDegBy(row);
+            return;
+        }
+        if (!NextIsSpace()) {
+            protector->error = true;
+            ErrorWrongCommand(row);
             return;
         }
 
@@ -474,9 +480,19 @@ void ExecuteCommand(Stack *s, String *command, ParserProtector *protector, size_
         DegBy(s, row, arg);
     }
     else if (CommandsEqual(command, AT)) {
-        if (LineIsOver(protector) || !NextIsSpace()) {
+        int next = NextChar();
+        // wnioskuje z przykładowych testów, że jeżeli po poleceniu mamy biały znak inny niż
+        // spacja to traktujemy to jako błąd argumentu, natomiast jeżeli mamy jakiś inny znak
+        // to wówczas jest to błąd polecenia
+        // dla komendy AT postępuje tak samo
+        if (LineIsOver(protector) || (9 <= next && next <= 13)) {
             protector->error = true;
             ErrorAt(row);
+            return;
+        }
+        if (!NextIsSpace()) {
+            protector->error = true;
+            ErrorWrongCommand(row);
             return;
         }
 
