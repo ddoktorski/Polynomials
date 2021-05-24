@@ -175,7 +175,8 @@ Number ParseNumber(bool *error) {
         return (Number) {.minus = false, .value = 0};
     }
 
-    str.arr = (char*) realloc(str.arr, str.size * sizeof(char));
+    CheckStringSpace(&str);
+    str.arr[str.size] = '\0';
     ull number = strtoull(str.arr, NULL, BASE);
 
     // strtoull zwraca ULLONG_MAX rowniez wtedy kiedy liczba w tablicy jest wieksza od ULLONG_MAX
