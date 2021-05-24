@@ -25,14 +25,15 @@ set(SOURCE_FILES
     src/poly.h
     src/stack.c
     src/stack.h
-    src/calc.c
-    src/calc.h
+    src/calculator.c
+    src/calculator.h
     src/parser.c
     src/parser.h
-    src/memory_handling.h
-    src/memory_handling.c
+    src/memory_helper.h
+    src/memory_helper.c
     src/errors.c
-    src/errors.h)
+    src/errors.h
+    src/calc.c)
 
 # Wskazujemy plik wykonywalny.
 add_executable(poly ${SOURCE_FILES})

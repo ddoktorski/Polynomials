@@ -1,11 +1,23 @@
+/** @file
+  Implementacja funkcji do obsługi stosu
+
+  Dariusz Doktorski <dd394248@students.mimuw.edu.pl>
+  @copyright Uniwersytet Warszawski
+  @date 2021
+*/
+
 #include "stack.h"
 
-
+/**
+ * Sprawdza czy na stosie jest jest zaalokowane wystarczająco dużo pamięci, żeby
+ * dodać kolejny element. Jeżeli nie ma to alokuje nową pamięć.
+ * @param[in] s : stos
+ */
 static void CheckFreeSpace(Stack *s) {
     if (s->size == s->allocated_size) {
         s->allocated_size = IncreaseSpace(s->allocated_size);
         s->polys = (Poly*) realloc(s->polys, s->allocated_size * sizeof(Poly));
-        //CheckPtr(s->polys);
+        CheckPtr(s->polys);
     }
 }
 
@@ -42,4 +54,5 @@ void StackClear(Stack *s) {
     while (!IsEmpty(s)) {
         StackPop(s);
     }
+    free(s->polys);
 }

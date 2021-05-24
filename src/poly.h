@@ -1,7 +1,7 @@
 /** @file
   Interfejs klasy wielomianów rzadkich wielu zmiennych
 
-  @authors Jakub Pawlewicz <pan@mimuw.edu.pl>, Marcin Peczarski <marpe@mimuw.edu.pl>
+  @authors Jakub Pawlewicz <pan@mimuw.edu.pl>, Marcin Peczarski <marpe@mimuw.edu.pl>, Dariusz Doktorski <dd394248@students.mimuw.edu.pl>
   @copyright Uniwersytet Warszawski
   @date 2021
 */
@@ -12,6 +12,7 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include "memory_helper.h"
 
 /** To jest typ reprezentujący współczynniki. */
 typedef long poly_coeff_t;
@@ -97,7 +98,7 @@ static inline bool PolyIsZero(const Poly *p);
  * @return jednomian @f$px_i^n@f$
  */
 static inline Mono MonoFromPoly(const Poly *p, poly_exp_t n) {
-  assert(n == 0 || !PolyIsZero(p));
+  //assert(n == 0 || !PolyIsZero(p));
   return (Mono) {.p = *p, .exp = n};
 }
 

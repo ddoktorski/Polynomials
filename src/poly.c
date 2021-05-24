@@ -1,22 +1,13 @@
 /** @file
   Implementacja funkcji do obsługi wielomianów rzadkich wielu zmiennych
 
-  @authors Jakub Pawlewicz <pan@mimuw.edu.pl>, Marcin Peczarski <marpe@mimuw.edu.pl>, Dariusz Doktorski <dd394248@students.mimuw.edu.pl>
+  Dariusz Doktorski <dd394248@students.mimuw.edu.pl>
   @copyright Uniwersytet Warszawski
   @date 2021
 */
 
 #include "poly.h"
-#include <stdlib.h>
 #include <string.h>
-
-/** Makro do sprawdzania, czy udało się zaalokować pamięć. */
-#define CHECK_PTR(p)  \
-  do {                \
-    if (p == NULL) {  \
-      exit(1);        \
-    }                 \
-  } while (0)
 
 /**
  * Funkcja pomocnicza do obliczania większej z dwóch liczb
@@ -95,7 +86,7 @@ Poly PolyAlloc(size_t size) {
     Poly p;
     p.size = size;
     p.arr = (Mono*)calloc(size, sizeof(Mono));
-    CHECK_PTR(p.arr);
+    CheckPtr(p.arr);
     return p;
 }
 
@@ -110,7 +101,7 @@ void PolyRealloc(Poly *p, size_t size) {
     else {
         p->size = size;
         p->arr = (Mono*)realloc(p->arr, size * sizeof(Mono));
-        CHECK_PTR(p->arr);
+        CheckPtr(p->arr);
     }
 }
 
@@ -259,7 +250,7 @@ Poly PolyAddMonos(size_t count, const Mono monos[]) {
         return PolyZero();
 
     Mono *sorted_monos = (Mono*) calloc(count, sizeof(Mono));
-    CHECK_PTR(sorted_monos);
+    CheckPtr(sorted_monos);
     memcpy(sorted_monos, monos, count * sizeof(Mono));
     qsort(sorted_monos, count, sizeof(Mono), CompareMonosByExp);
 
@@ -299,7 +290,7 @@ Poly PolyAddMonos(size_t count, const Mono monos[]) {
     }
 
     sorted_monos = (Mono*)realloc(sorted_monos, real_size * sizeof(Mono));
-    CHECK_PTR(sorted_monos);
+    CheckPtr(sorted_monos);
     return (Poly) {.arr = sorted_monos, .size = real_size};
 }
 
@@ -452,7 +443,7 @@ static Poly PolyMulPoly(const Poly *p, const Poly *q) {
     }
 
     monos = (Mono*)realloc(monos, real_size * sizeof(Mono));
-    CHECK_PTR(monos);
+    CheckPtr(monos);
     Poly result = PolyAddMonos(real_size, monos);
     free(monos);
     return result;
@@ -493,28 +484,3 @@ Poly PolyAt(const Poly *p, poly_coeff_t x) {
     }
     return result;
 }
-
-/*
- * Funkcje pomocnicze do drukowania wielomianu
- * zostawiam je zakomentowane w pliku, bo moga sie przydac w kolejnych czesciach
-
-void PolyPrintHelper(const Poly *p, int i) {
-    if (PolyIsZero(p))
-        printf("ZERO");
-    else if (PolyIsCoeff(p)) {
-        printf("%ld", p->coeff);
-    }
-    else {
-        for (size_t j = 0; j < p->size; ++j) {
-            printf("x_%d^%d(", i, p->arr[j].exp);
-            PolyPrintHelper(&p->arr[j].p, i + 1);
-            (j == p->size - 1) ? printf(")") : printf(") + ");
-        }
-    }
-}
-
-void PolyPrint(const Poly *p) {
-    PolyPrintHelper(p, 0);
-    printf("\n");
-}
-*/

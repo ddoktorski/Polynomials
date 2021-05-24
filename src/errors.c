@@ -1,3 +1,11 @@
+/** @file
+  Imlpementacja funkcji do obsługi błędów
+
+  Dariusz Doktorski <dd394248@students.mimuw.edu.pl>
+  @copyright Uniwersytet Warszawski
+  @date 2021
+*/
+
 #include "errors.h"
 
 void ErrorWrongCommand(size_t row) {
