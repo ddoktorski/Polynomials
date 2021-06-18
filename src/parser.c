@@ -30,6 +30,8 @@
 #define SMALL_Z 'z'
 #define BIG_A 'A'
 #define BIG_Z 'Z'
+#define WHITE_SPACE_START 9
+#define WHITE_SPACE_END 13
 ///@}
 
  ///@{
@@ -136,11 +138,11 @@ static inline bool CheckExpCorrect(Number *n) {
 }
 
 /**
- * Sprawdza czy wczytany argument polecenia DEG_BY jest poprawny.
- * @param[in] n : argument polecenia DEG_BY
- * @return Czy argument polecenia DEG_BY jest poprawny?
+ * Sprawdza czy wczytany argument polecenia DEG_BY/COMPOSE jest poprawny.
+ * @param[in] n : argument polecenia DEG_BY/COMPOSE
+ * @return Czy argument polecenia DEG_BY/COMPOSE jest poprawny?
  */
-static inline bool CheckArgDegBy(Number *n) {
+static inline bool CheckArgDegByCompose(Number *n) {
     return !n->minus && n->value <= ULLONG_MAX;
 }
 
@@ -218,13 +220,13 @@ poly_exp_t ParseExp(bool *error) {
 }
 
 /**
- * Parsuje argument polecenia DEG_BY.
+ * Parsuje argument polecenia DEG_BY/COMPOSE.
  * @param[in,out] error : informacja o błędzie
- * @return wartość argumentu polecenia DEG_BY lub 0 w przypadku błędu
+ * @return wartość argumentu polecenia DEG_BY/COMPOSE lub 0 w przypadku błędu
  */
-ull ParseArgDegBy(bool *error) {
+ull ParseArgDegByCompose(bool *error) {
     Number num = ParseNumber(error);
-    if (!CheckArgDegBy(&num))
+    if (!CheckArgDegByCompose(&num))
         *error = true;
     return (*error) ? 0 : num.value;
 }
@@ -339,21 +341,6 @@ static bool IsLetter(int sign) {
     return BIG_A <= sign && sign <= BIG_Z;
 }
 
-/**
- * Sprawdza czy kolejny znak do wczytania jest spacją, jeżeli nie to oddaje
- * ten znak na standardowe wejście.
- * @return Czy kolejny znak jest spacją?
- */
-static bool NextIsSpace() {
-    int next = getchar();
-    if (next == SPACE) {
-        return true;
-    }
-    else {
-        ungetc(next, stdin);
-        return false;
-    }
-}
 
 /**
  * Sprawdza czy doszliśmy do końca wielomianu. Jeżeli kolejny znak jest plusem to go pobiera, jeżeli
@@ -433,8 +420,9 @@ Poly ParsePoly(ParserProtector *protector) {
             CheckIfEndOfPoly(&protector->error, &end_of_poly);
     }
 
-    Poly p = PolyAddMonos(monos.size, monos.arr);
-    DestroyMonosArr(&monos);
+    Poly p = PolyOwnMonos(monos.size, monos.arr);
+    if (monos.size == 0)
+        DestroyMonosArr(&monos);
     return p;
 }
 
@@ -462,77 +450,92 @@ void ParseCommand(String *command) {
     }
 }
 
+/**
+ * Pierwsza z dwóch pomocniczych funkcji do sprawdzania poprawności argumentu.
+ * Sprawdza podstawowe warunki na to, aby argument poleceń DEG_BY, AT, COMPOSE był poprawny.
+ * @param[in][out] protector : informacje o stanie wczytywanego wiersza
+ * @param[in] row : numer aktualnie wczytywanego wiersza
+ * @param[in] command : pomocnicze oznaczenie polecenia, 0 oznacza DEG_BY, 1 - AT, 2 - COMPOSE
+ * @return Czy argument jest niepoprawny?
+ */
+bool IncorrectArgument1(ParserProtector *protector, size_t row, int command) {
+    int next = NextChar();
+    // jeżeli po poleceniu mamy biały znak inny niż
+    // spacja to traktujemy to jako błąd argumentu, natomiast jeżeli mamy jakiś inny znak
+    // to wówczas jest to błąd polecenia
+    // dla komend AT i COMPOSE postępujemy tak samo
+    if (LineIsOver(protector) || (WHITE_SPACE_START <= next && next <= WHITE_SPACE_END)) {
+        protector->error = true;
+        if (command == 0)
+            ErrorDegBy(row);
+        else if (command == 1)
+            ErrorAt(row);
+        else
+            ErrorCompose(row);
+        return true;
+    }
+
+    if (next != SPACE) {
+        protector->error = true;
+        ErrorWrongCommand(row);
+        return true;
+    }
+    else {
+        getchar();
+    }
+
+    return false;
+}
+
+bool IncorrectArgument2(ParserProtector *protector, size_t row, int command) {
+    CheckIfEnd(protector);
+
+    if (!LineIsOver(protector) || protector->error) {
+        if (command == 0)
+            ErrorDegBy(row);
+        else if (command == 1)
+            ErrorAt(row);
+        else
+            ErrorCompose(row);
+        return true;
+    }
+
+    return false;
+}
+
 void ExecuteCommand(Stack *s, String *command, ParserProtector *protector, size_t row) {
     CheckIfEnd(protector);
 
     if (CommandsEqual(command, DEG_BY)) {
-        int next = NextChar();
-        // wnioskuje z przykładowych testów, że jeżeli po poleceniu mamy biały znak inny niż
-        // spacja to traktujemy to jako błąd argumentu, natomiast jeżeli mamy jakiś inny znak
-        // to wówczas jest to błąd polecenia
-        // dla komendy AT postępuje tak samo
-        if (LineIsOver(protector) || (9 <= next && next <= 13)) {
-            protector->error = true;
-            ErrorDegBy(row);
+        if (IncorrectArgument1(protector, row, 0))
             return;
-        }
-        if (!NextIsSpace()) {
-            protector->error = true;
-            ErrorWrongCommand(row);
-            return;
-        }
 
-        ull arg = ParseArgDegBy(&protector->error);
-        CheckIfEnd(protector);
+        ull arg = ParseArgDegByCompose(&protector->error);
 
-        if (!LineIsOver(protector) || protector->error) {
-            ErrorDegBy(row);
+        if (IncorrectArgument2(protector, row, 0))
             return;
-        }
+
         DegBy(s, row, arg);
     }
     else if (CommandsEqual(command, AT)) {
-        int next = NextChar();
-        if (LineIsOver(protector) || (9 <= next && next <= 13)) {
-            protector->error = true;
-            ErrorAt(row);
+        if (IncorrectArgument1(protector, row, 1))
             return;
-        }
-        if (!NextIsSpace()) {
-            protector->error = true;
-            ErrorWrongCommand(row);
-            return;
-        }
 
         poly_coeff_t x = ParseCoeff(&protector->error);
-        CheckIfEnd(protector);
 
-        if (!LineIsOver(protector) || protector->error) {
-            protector->error = true;
-            ErrorAt(row);
+        if (IncorrectArgument2(protector, row, 1))
             return;
-        }
+
         At(s, row, x);
     }
     else if (CommandsEqual(command, COMPOSE)) {
-        int next = NextChar();
-        if (LineIsOver(protector) || (9 <= next && next <= 13)) {
-            protector->error = true;
-            ErrorCompose(row);
+        if (IncorrectArgument1(protector, row, 2))
             return;
-        }
-        if (!NextIsSpace()) {
-            protector->error = true;
-            ErrorWrongCommand(row);
-            return;
-        }
-        ull arg = ParseArgDegBy(&protector->error);
-        CheckIfEnd(protector);
 
-        if (!LineIsOver(protector) || protector->error) {
-            ErrorCompose(row);
+        ull arg = ParseArgDegByCompose(&protector->error);
+
+        if (IncorrectArgument2(protector, row, 2))
             return;
-        }
 
         if (arg == ULLONG_MAX)
             ErrorStackUnderflow(row);

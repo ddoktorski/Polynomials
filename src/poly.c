@@ -90,13 +90,17 @@ static Poly PolyPowerHelper(Poly *q, Poly *p, poly_exp_t n) {
         Poly square = PolyMul(p, p);
         if (n % 2 == 0) {
             PolyDestroy(p);
-            return PolyPowerHelper(q, &square, n / 2);
+            Poly res = PolyPowerHelper(q, &square, n / 2);
+            PolyDestroy(&square);
+            return res;
         }
         else {
             Poly mul = PolyMul(p, q);
             PolyDestroy(p);
             PolyDestroy(q);
-            return PolyPowerHelper(&mul, &square, n / 2);
+            Poly res = PolyPowerHelper(&mul, &square, n / 2);
+            PolyDestroy(&square);
+            return res;
         }
     }
 }
@@ -105,7 +109,9 @@ Poly PolyPower(const Poly *p, poly_exp_t n) {
     assert(n >= 0);
     Poly one = PolyFromCoeff(1);
     Poly copy = PolyClone(p);
-    return PolyPowerHelper(&one, &copy, n);
+    Poly res = PolyPowerHelper(&one, &copy, n);
+    PolyDestroy(&copy);
+    return res;
 }
 
 
@@ -303,10 +309,12 @@ Poly PolyAddMonosHelper(size_t count, Mono sorted_monos[]) {
     poly_coeff_t coeff;
     if (real_size == 0) {
         free(sorted_monos);
+        sorted_monos = NULL;
         return PolyZero();
     }
     else if (real_size == 1 && MonoIsCoeff(&sorted_monos[0], &coeff)) {
         free(sorted_monos);
+        sorted_monos = NULL;
         return PolyFromCoeff(coeff);
     }
 
@@ -547,8 +555,6 @@ Poly PolyComposeHelper(const Poly *p, size_t next, size_t k, const Poly q[]) {
         return PolyZero();
     }  */
 
-    //Poly pow = PolyClone(&q[next]);
-    //size_t idx = 0;
     Poly zero = PolyZero();
     Poly res = PolyZero();
 

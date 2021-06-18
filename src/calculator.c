@@ -119,16 +119,16 @@ void At(Stack *s, size_t row, long int x) {
 
 void Compose(Stack *s, size_t row, size_t k) {
     if (!StackUnderflow(s, k + 1, row)) {
-        Poly *q = (Poly*) calloc(k, sizeof(Poly));
+        /*Poly *q = (Poly*) calloc(k, sizeof(Poly));
         size_t j = StackGetSize(s) - 2;
         for (int i = (int) k - 1; i >= 0; --i) {
            q[i] = s->polys[j--];
-        }
-        Poly res = PolyCompose(&s->polys[StackGetSize(s) - 1], k, q);
+        }*/
+        Poly res = PolyCompose(&s->polys[StackGetSize(s) - 1], k, s->polys + StackGetSize(s) - k - 1);
         for (size_t i = 0; i <= k; ++i) {
             StackPop(s);
         }
         StackPush(s, &res);
-        free(q);
+        //free(q);
     }
 }

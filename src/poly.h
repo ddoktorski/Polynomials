@@ -222,11 +222,13 @@ Poly PolyMul(const Poly *p, const Poly *q);
 Poly PolyPower(const Poly *p, poly_exp_t n);
 
 /**
- * TODO
+ * Wykonuje złożenie wielomianów, pod zmienne wielomianu @p p podstawia po kolei wielomiany
+ * z tablicy @p q. Jeżeli w tablicy @p q jest mniej elementów niż zmiennych w wielomianie @p p
+ * to pod pozostałe zmienne podstawia wielomian tożsamościowo równy 0.
  * @param[in] p - wielomian
  * @param[in] k - ilość wielomianów w tablicy @p q
  * @param[in] q - tablica wielomianów, które zostaną podstawione do wielomianu @p p
- * @return
+ * @return Wielomian będący złożeniem wielomianu @p i wielomianów z tablicy @p q.
  */
 Poly PolyCompose(const Poly *p, size_t k, const Poly q[]);
 
