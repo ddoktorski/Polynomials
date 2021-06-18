@@ -48,6 +48,7 @@
 #define AT "AT"
 #define PRINT "PRINT"
 #define POP "POP"
+#define COMPOSE "COMPOSE"
 ///@}
 
 /** Maksymalna wartość dla typu unsigned long long zapisana jako string. */
@@ -418,8 +419,9 @@ Poly ParsePoly(ParserProtector *protector) {
     while (!StopParsing(protector) && !end_of_poly) {
         CheckMonosArrSpace(&monos);
         Mono m = ParseMono(protector);
-        if (!PolyIsZero(&m.p))
+        if (!PolyIsZero(&m.p)) {
             monos.arr[monos.size++] = m;
+        }
 
         CheckIfEnd(protector);
 
@@ -511,6 +513,31 @@ void ExecuteCommand(Stack *s, String *command, ParserProtector *protector, size_
             return;
         }
         At(s, row, x);
+    }
+    else if (CommandsEqual(command, COMPOSE)) {
+        int next = NextChar();
+        if (LineIsOver(protector) || (9 <= next && next <= 13)) {
+            protector->error = true;
+            ErrorCompose(row);
+            return;
+        }
+        if (!NextIsSpace()) {
+            protector->error = true;
+            ErrorWrongCommand(row);
+            return;
+        }
+        ull arg = ParseArgDegBy(&protector->error);
+        CheckIfEnd(protector);
+
+        if (!LineIsOver(protector) || protector->error) {
+            ErrorCompose(row);
+            return;
+        }
+
+        if (arg == ULLONG_MAX)
+            ErrorStackUnderflow(row);
+        else
+            Compose(s, row, arg);
     }
     else if (LineIsOver(protector)) {
         if (CommandsEqual(command, ZERO))

@@ -82,6 +82,34 @@ static inline poly_coeff_t Power(poly_coeff_t x, poly_exp_t n) {
     return PowerHelper(1, x, n);
 }
 
+static Poly PolyPowerHelper(Poly *q, Poly *p, poly_exp_t n) {
+    if (n == 0) {
+        return *q;
+    }
+    else {
+        Poly square = PolyMul(p, p);
+        if (n % 2 == 0) {
+            PolyDestroy(p);
+            return PolyPowerHelper(q, &square, n / 2);
+        }
+        else {
+            Poly mul = PolyMul(p, q);
+            PolyDestroy(p);
+            PolyDestroy(q);
+            return PolyPowerHelper(&mul, &square, n / 2);
+        }
+    }
+}
+
+Poly PolyPower(const Poly *p, poly_exp_t n) {
+    assert(n >= 0);
+    Poly one = PolyFromCoeff(1);
+    Poly copy = PolyClone(p);
+    return PolyPowerHelper(&one, &copy, n);
+}
+
+
+
 Poly PolyAlloc(size_t size) {
     Poly p;
     p.size = size;
@@ -100,7 +128,7 @@ void PolyRealloc(Poly *p, size_t size) {
         PolyDestroy(p);
     else {
         p->size = size;
-        p->arr = (Mono*)realloc(p->arr, size * sizeof(Mono));
+        p->arr = (Mono* )realloc(p->arr, size * sizeof(Mono));
         CheckPtr(p->arr);
     }
 }
@@ -245,23 +273,16 @@ Poly PolyAdd(const Poly *p, const Poly *q) {
         return PolyAddPoly(p, q);
 }
 
-Poly PolyAddMonos(size_t count, const Mono monos[]) {
-    if (count == 0)
-        return PolyZero();
-
-    Mono *sorted_monos = (Mono*) calloc(count, sizeof(Mono));
-    CheckPtr(sorted_monos);
-    memcpy(sorted_monos, monos, count * sizeof(Mono));
-    qsort(sorted_monos, count, sizeof(Mono), CompareMonosByExp);
-
+Poly PolyAddMonosHelper(size_t count, Mono sorted_monos[]) {
     size_t real_size = 0;
 
     for (size_t i = 0; i < count; ++i) {
         // jezeli dlugosc dodanych jednomianow jest rowna 0
         // lub obecny jednomian ma inny wykladnik (zawsze wiekszy) od ostatniego dodanego jednomianu
         // to przestawiamy obecny jednomian w tablicy sorted_monos na indeks real_size
-        if (real_size == 0 || MonoGetExp(&sorted_monos[i]) != MonoGetExp(&sorted_monos[real_size - 1]))
+        if (real_size == 0 || MonoGetExp(&sorted_monos[i]) != MonoGetExp(&sorted_monos[real_size - 1])) {
             sorted_monos[real_size++] = sorted_monos[i];
+        }
         else {
             // dodajemy 2 jednomiany o tym samym wykladniku
             poly_exp_t exp = MonoGetExp(&sorted_monos[i]);
@@ -292,6 +313,38 @@ Poly PolyAddMonos(size_t count, const Mono monos[]) {
     sorted_monos = (Mono*)realloc(sorted_monos, real_size * sizeof(Mono));
     CheckPtr(sorted_monos);
     return (Poly) {.arr = sorted_monos, .size = real_size};
+}
+
+Poly PolyAddMonos(size_t count, const Mono monos[]) {
+    if (count == 0 || monos == NULL)
+        return PolyZero();
+
+    Mono *sorted_monos = (Mono*) calloc(count, sizeof(Mono));
+    CheckPtr(sorted_monos);
+    memcpy(sorted_monos, monos, count * sizeof(Mono));
+    qsort(sorted_monos, count, sizeof(Mono), CompareMonosByExp);
+
+    return PolyAddMonosHelper(count, sorted_monos);
+}
+
+Poly PolyOwnMonos(size_t count, Mono *monos) {
+    if (count == 0 || monos == NULL)
+        return PolyZero();
+
+    qsort(monos, count, sizeof(Mono), CompareMonosByExp);
+    return PolyAddMonosHelper(count, monos);
+}
+
+Poly PolyCloneMonos(size_t count, const Mono monos[]) {
+    if (count == 0 || monos == NULL)
+        return PolyZero();
+
+    Mono *sorted_monos = (Mono*) calloc(count, sizeof(Mono));
+    for (size_t i = 0; i < count; ++i) {
+        sorted_monos[i] = MonoClone(&monos[i]);
+    }
+    qsort(sorted_monos, count, sizeof(Mono), CompareMonosByExp);
+    return PolyAddMonosHelper(count, sorted_monos);
 }
 
 bool PolyIsEq(const Poly *p, const Poly *q) {
@@ -483,4 +536,42 @@ Poly PolyAt(const Poly *p, poly_coeff_t x) {
         result = add;
     }
     return result;
+}
+
+Poly PolyComposeHelper(const Poly *p, size_t next, size_t k, const Poly q[]) {
+    if (PolyIsCoeff(p))
+        return *p;
+
+    /*
+    if (next >= k) {
+        return PolyZero();
+    }  */
+
+    //Poly pow = PolyClone(&q[next]);
+    //size_t idx = 0;
+    Poly zero = PolyZero();
+    Poly res = PolyZero();
+
+    for (size_t i = 0; i < PolyGetSize(p); ++i) {
+        Poly pow = PolyPower((next < k) ? &q[next] : &zero, MonoGetExp(&p->arr[i]));
+
+        Poly compose_inside = PolyComposeHelper(&p->arr[i].p, next + 1, k, q);
+
+        Poly cur_res = PolyMul(&pow, &compose_inside);
+
+        PolyDestroy(&compose_inside);
+        PolyDestroy(&pow);
+
+        Poly add = PolyAdd(&cur_res, &res);
+
+        PolyDestroy(&res);
+        PolyDestroy(&cur_res);
+
+        res = add;
+    }
+    return res;
+}
+
+Poly PolyCompose(const Poly *p, size_t k, const Poly q[]) {
+    return PolyComposeHelper(p, 0, k, q);
 }

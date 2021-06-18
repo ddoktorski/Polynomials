@@ -12,6 +12,8 @@
 #include "errors.h"
 #include "parser.h"
 
+void PrintHelper(const Poly *p);
+
 /**
  * Wypisuje wielomian z wierzchołku stosu.
  * @param[in] s : stos
@@ -112,5 +114,14 @@ void DegBy(Stack *s, size_t row, unsigned long long idx);
  * @param[in] row : aktualny numer wiersza, z którego zostało wczytane polecenie
  */
 void At(Stack *s, size_t row, long int x);
+
+/**
+ * Wykonuje operacje złożenia wielomianów. Zdejmuje ze stosu @f$k + 1@f$ wielomianów.
+ * TODO
+ * @param[in] s : stos
+ * @param[in] row : aktualny numer wiersza, z którego zostało wczytane polecenie
+ * @param[in] k :
+ */
+void Compose(Stack *s, size_t row, size_t k);
 
 #endif //POLYNOMIALS_CALCULATOR_H

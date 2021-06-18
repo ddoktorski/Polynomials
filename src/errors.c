@@ -23,6 +23,10 @@ void ErrorAt(size_t row) {
     fprintf(stderr, "ERROR %zu AT WRONG VALUE\n", row);
 }
 
+void ErrorCompose(size_t row) {
+    fprintf(stderr, "ERROR %zu COMPOSE WRONG PARAMETER\n", row);
+}
+
 void ErrorStackUnderflow(size_t row) {
     fprintf(stderr, "ERROR %zu STACK UNDERFLOW\n", row);
 }

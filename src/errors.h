@@ -37,6 +37,12 @@ void ErrorDegBy(size_t row);
 void ErrorAt(size_t row);
 
 /**
+ * Wyświetla błąd o niepoprawnym argumencie polecenia COMPOSE.
+ * @param[in] row : numer wiersza, w którym wystąpił błąd
+ */
+void ErrorCompose(size_t row);
+
+/**
  * Wyświetla błąd dotyczący za małej liczby wielomianów na stosie do wykonania polecenia.
  * @param[in] row : numer wiersza, w którym wystąpił błąd
  */
