@@ -228,7 +228,7 @@ Poly PolyPower(const Poly *p, poly_exp_t n);
  * @param[in] p - wielomian
  * @param[in] k - ilość wielomianów w tablicy @p q
  * @param[in] q - tablica wielomianów, które zostaną podstawione do wielomianu @p p
- * @return Wielomian będący złożeniem wielomianu @p i wielomianów z tablicy @p q.
+ * @return Wielomian będący złożeniem wielomianu @p i wielomianów z tablicy @p q
  */
 Poly PolyCompose(const Poly *p, size_t k, const Poly q[]);
 

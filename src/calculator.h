@@ -117,10 +117,12 @@ void At(Stack *s, size_t row, long int x);
 
 /**
  * Wykonuje operacje złożenia wielomianów. Zdejmuje ze stosu @f$k + 1@f$ wielomianów.
- * TODO
+ * Do wielomianu z wierzchołka stosu podstawia pod @p k pierwszymch zmiennych kolejne wielomiany
+ * ze stosu, w taki sposób, że kolejny wielomian ze stosu zostaje podstawiony pod zmienną k-1, następny
+ * pod zmienną k-2 itd.
  * @param[in] s : stos
  * @param[in] row : aktualny numer wiersza, z którego zostało wczytane polecenie
- * @param[in] k :
+ * @param[in] k : liczba wilomianów, które zostana podstawione pod zmienne wielomianu z wierzchu stosu
  */
 void Compose(Stack *s, size_t row, size_t k);
 

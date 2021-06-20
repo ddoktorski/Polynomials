@@ -51,3 +51,21 @@ if (DOXYGEN_FOUND)
         COMMENT "Generating API documentation with Doxygen"
     )
 endif (DOXYGEN_FOUND)
+
+set(TEST_SOURCE_FILES
+        src/poly.c
+        src/poly.h
+        src/stack.c
+        src/stack.h
+        src/calculator.c
+        src/calculator.h
+        src/parser.c
+        src/parser.h
+        src/memory_helper.h
+        src/memory_helper.c
+        src/errors.c
+        src/errors.h
+        src/poly_example.c)
+
+add_executable(test EXCLUDE_FROM_ALL ${TEST_SOURCE_FILES})
+set_target_properties(test PROPERTIES OUTPUT_NAME poly_test)

@@ -82,6 +82,10 @@ static inline poly_coeff_t Power(poly_coeff_t x, poly_exp_t n) {
     return PowerHelper(1, x, n);
 }
 
+/**
+ * Funkcja pomocnicza do podnoszenia wielomianu do potęgi @p n.
+ * Jest to algorytm szybkiego potęgowania zaimplementowany dla struktury Poly.
+ */
 static Poly PolyPowerHelper(Poly *q, Poly *p, poly_exp_t n) {
     if (n == 0) {
         return *q;
@@ -279,6 +283,12 @@ Poly PolyAdd(const Poly *p, const Poly *q) {
         return PolyAddPoly(p, q);
 }
 
+/**
+ * Funkcja pomocnicza do dodawania jednomianów.
+ * @param[in] count : liczba jednomianów w tablicy
+ * @param[in] sorted_monos : posortowana tablica jednomianów, ze względu na potęgi
+ * @return Wielomian uzyskany przez dodanie jednomianów z tablicy @p sorted_monos
+ */
 Poly PolyAddMonosHelper(size_t count, Mono sorted_monos[]) {
     size_t real_size = 0;
 
@@ -546,33 +556,41 @@ Poly PolyAt(const Poly *p, poly_coeff_t x) {
     return result;
 }
 
+/**
+ * Funkcja pomocnicza do składania wielomianów.
+ * @param[in] p : główny wielomian
+ * @param[in] next : indeks następnego wielomianu w tablicy @p q
+ * @param[in] k : liczba zmiennych
+ * @param[in] q : tablica wielomianów podstawianych pod zmienne wielomianu @p p
+ * @return Wielomian otrzymany przez podstawienie pod @p k pierwszych zmiennych wielomianu @p wielomianów z tablicy @p q.
+ */
 Poly PolyComposeHelper(const Poly *p, size_t next, size_t k, const Poly q[]) {
     if (PolyIsCoeff(p))
         return *p;
-
-    /*
-    if (next >= k) {
-        return PolyZero();
-    }  */
 
     Poly zero = PolyZero();
     Poly res = PolyZero();
 
     for (size_t i = 0; i < PolyGetSize(p); ++i) {
+        // jeżeli indeks next >= k to bierzemy wielomian zerowy
         Poly pow = PolyPower((next < k) ? &q[next] : &zero, MonoGetExp(&p->arr[i]));
 
+        // składamy wielomian "w środku"
         Poly compose_inside = PolyComposeHelper(&p->arr[i].p, next + 1, k, q);
 
+        // mnożymy złożenie wewnątrz z potęgą pow wielomianu, w którym aktulanie jesteśmy
         Poly cur_res = PolyMul(&pow, &compose_inside);
 
         PolyDestroy(&compose_inside);
         PolyDestroy(&pow);
 
+        // dodajemy do aktualnego wyniku
         Poly add = PolyAdd(&cur_res, &res);
 
         PolyDestroy(&res);
         PolyDestroy(&cur_res);
 
+        // aktualizujemy wynik
         res = add;
     }
     return res;

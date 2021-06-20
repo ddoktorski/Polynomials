@@ -10,6 +10,6 @@ Uwaga: aktualna treść zadania znajduje się w [Moodle](https://moodle.mimuw.ed
 Tegoroczne duże zadanie polega na zaimplementowaniu operacji na wielomianach
 rzadkich wielu zmiennych.
 
-Plik poly.h zawiera interfejs klasy wielomianów rzadkich wielu zmiennych, w pierwszej części projektu w pliku poly.c zostały zaimplementowane funkcje z tego intefejsu do przeprowadzania podstawowych operacji na wielomianach. W drugiej części projektu zostały zaimplementowany kalkulator działający na wielomianach, stosujący odwrotną notację polską.
+Plik poly.h zawiera interfejs klasy wielomianów rzadkich wielu zmiennych, w pierwszej części projektu w pliku poly.c zostały zaimplementowane funkcje z tego intefejsu do przeprowadzania podstawowych operacji na wielomianach. W drugiej części projektu zostały zaimplementowany kalkulator działający na wielomianach, stosujący odwrotną notację polską. W ostatniej części projektu dodana została funkcja PolyCompose umożliwiająca operację składania wielomianów. Ponadto dodane zostały metody PolyOwnMonos oraz PolyCloneMonos, umożliwiające dodanie jednomianów podobnie jak wcześniej zaimplementowana funkcja PolyAddMonos, różnica polega na innym zarządzaniu pamięcią obiektów, które przekazane są jako argumenty funkcji.
 
 */

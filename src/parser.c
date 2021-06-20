@@ -125,7 +125,8 @@ static bool CheckIfNumberIsNegative() {
  */
 static inline bool CheckCoeffCorrect(Number *n) {
     // przypadek value = 0?
-    return n->value <= (ull) (LONG_MAX + n->minus);
+    ull max = LONG_MAX;
+    return n->value <= (max + n->minus);
 }
 
 /**
@@ -487,6 +488,14 @@ bool IncorrectArgument1(ParserProtector *protector, size_t row, int command) {
     return false;
 }
 
+/**
+ * Druga z pomocniczych funkcji do sprawdzania poprawności argumentu.
+ * Sprawdza podstawowe warunki na to, aby argument poleceń DEG_BY, AT, COMPOSE był poprawny.
+ * @param[in][out] protector : informacje o stanie wczytywanego wiersza
+ * @param[in] row : numer aktualnie wczytywanego wiersza
+ * @param[in] command : pomocnicze oznaczenie polecenia, 0 oznacza DEG_BY, 1 - AT, 2 - COMPOSE
+ * @return Czy argument jest niepoprawny?
+ */
 bool IncorrectArgument2(ParserProtector *protector, size_t row, int command) {
     CheckIfEnd(protector);
 
